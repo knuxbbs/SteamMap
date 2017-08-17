@@ -1,59 +1,76 @@
 var s = require("./steam-config");
-var steam_countries = require('./steam_countries.min.json');
-var count = 0;
+var steamCountries = require('./data/steam_countries.min.json');
+var counter = 0;
 
 s.getFriendList({
   steamid: '76561198168752057',
-  relationship: 'all', //'all' or 'friend' 
+  relationship: 'all', //'all' or 'friend'
   callback: function (err, data) {
-    data.friendslist.friends.forEach(function (user) {
+    data.friendslist.friends.forEach(function (friend) {
 
       s.getPlayerSummaries({
-        steamids: user.steamid,
+        steamids: friend.steamid,
         callback: function (err, data) {
           data.response.players.forEach(function (player) {
             var username = player.personaname;
-            var country = player.loccountrycode;
-            var state = player.locstatecode;
-            var city = player.loccityid;
-            var longitude = "";
-            var latitude = "";
+            var countrycode = player.loccountrycode;
+            var state, city, longitude, latitude;
 
-            if (country) {
-              var ctrs = steam_countries[country];
-              if (state) {
-                state = ctrs.states[player.locstatecode].name;
-                if(city){
-                  city = ctrs.states[player.locstatecode].cities[player.loccityid].name;
-                  longitude = ctrs.states[player.locstatecode].cities[player.loccityid].coordinates.split(",")[0];
-                  latitude = ctrs.states[player.locstatecode].cities[player.loccityid].coordinates.split(",")[1];
+            if (countrycode) {
+              var country = steamCountries[countrycode];
+
+              if (player.locstatecode) {
+                state = country.states[player.locstatecode].name;
+
+                if (player.loccityid) {
+                  city = country.states[player.locstatecode].cities[player.loccityid].name;
+                  longitude = country.states[player.locstatecode].cities[player.loccityid].coordinates.split(",")[0];
+                  latitude = country.states[player.locstatecode].cities[player.loccityid].coordinates.split(",")[1];
+                } else {
+                  longitude = country.states[player.locstatecode].coordinates.split(",")[0];
+                  latitude = country.states[player.locstatecode].coordinates.split(",")[1];
                 }
+              } else {
+                longitude = country.coordinates.split(",")[0];
+                latitude = country.coordinates.split(",")[1];
               }
             }
 
             s.getOwnedGames({
-              steamid: user.steamid,
-              include_appinfo: true,
+              steamid: friend.steamid,
               callback: function (err, data) {
                 if (data) {
                   //Obtém o game com mais tempo de jogo
-                  var res = Math.max.apply(Math, data.response.games.map(function (o) { return o.playtime_forever; }))
+                  var maxPlaytimeForever = Math.max.apply(Math, data.response.games.map(function (o) { return o.playtime_forever; }))
 
                   //Obtém o objeto que representa o game
-                  var obj = data.response.games.find(function (o) { return o.playtime_forever == res; })
+                  var mostPlayedGame = data.response.games.find(function (o) { return o.playtime_forever == maxPlaytimeForever; })
 
                   s.getSchemaForGame({
-                    appid: obj.appid,
+                    appid: mostPlayedGame.appid,
                     callback: function (err, data) {
 
-                      if (data.game) {
-                        console.log("User id: " + user.steamid);
+                      if (data.game && countrycode) {
+                        var localization = countrycode;
+
+                        if (state) {
+                          localization = state + ", " + localization;
+                          if (city) {
+                            localization = city + ", " + localization;
+                          }
+                        }
+
+                        console.log("User id: " + friend.steamid);
                         console.log("User name: " + username);
-                        console.log("Most played game id: " + obj.appid);
+                        console.log("Most played game id: " + mostPlayedGame.appid);
                         console.log("Most played game name: " + data.game.gameName);
-                        console.log("Localization: " + city + ", " + state + ", " + country);
-                        if (latitude) console.log("Longitude: " + longitude);
-                        if (longitude) console.log("Latitude: " + latitude);
+                        console.log("Localization: " + localization);
+
+                        if (longitude) {
+                          console.log("Longitude: " + longitude);
+                          console.log("Latitude: " + latitude);
+                        }
+
                         console.log();
                       }
                     }
@@ -64,6 +81,6 @@ s.getFriendList({
           })
         }
       })
-    }, this);
+    })
   },
 });

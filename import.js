@@ -1,21 +1,30 @@
 var s = require("./steam-config");
 var steamCountries = require('./data/steam_countries.min.json');
+var fs = require('fs');
+var steamUserDataArray = [];
 var itemsProcessed = 0;
 var counter = 0;
-const max = 100;
+const max = 1000;
 
-getSteamWebApiData("76561198168752057", function (newSteamId) {
+getSteamWebApiData("76561198168752057", repeatCallback);
+
+function repeatCallback(newSteamId) {
   itemsProcessed = 0;
-  if (newSteamId !== "") getSteamWebApiData(newSteamId);
-});
-
-/*
-while (counter < 200){
-  
+  if (newSteamId !== "") {
+    getSteamWebApiData(newSteamId, repeatCallback);
+  } else {
+    console.log("Importação finalizada.");
+    writeJsonFile();
+  }
 }
-*/
 
-function getSteamWebApiData(steamid, callback) {  
+function writeJsonFile(callback) {
+  //Cria arquivo JSON com dados obtidos do webservice
+  var json = JSON.stringify(steamUserDataArray);
+  fs.writeFile('./data/imported/myjsonfile.json', json, 'utf8', callback);
+}
+
+function getSteamWebApiData(steamid, callback) {
   s.getFriendList({
     steamid: steamid,
     relationship: 'all', //'all' or 'friend'
@@ -23,10 +32,13 @@ function getSteamWebApiData(steamid, callback) {
       if (data1.friendslist) {
         data1.friendslist.friends.forEach(function (friend) {
 
+          itemsProcessed++;
+
           s.getPlayerSummaries({
             steamids: friend.steamid,
             callback: function (err, data2) {
               if (data2) {
+                //TODO: Interromper laço de repetição caso counter > max;
                 data2.response.players.forEach(function (player) {
                   var username = player.personaname;
                   var countrycode = player.loccountrycode;
@@ -46,7 +58,7 @@ function getSteamWebApiData(steamid, callback) {
                         longitude = country.states[player.locstatecode].coordinates.split(",")[0];
                         latitude = country.states[player.locstatecode].coordinates.split(",")[1];
                       }
-                    } else {
+                    } else if (country && country.coordinates) {
                       longitude = country.coordinates.split(",")[0];
                       latitude = country.coordinates.split(",")[1];
                     }
@@ -76,25 +88,27 @@ function getSteamWebApiData(steamid, callback) {
                                 }
                               }
 
+                              //Cria objeto a ser inserido no JSON
+                              var steamUserData = getSteamUserData(friend.steamid, username, mostPlayedGame.appid,
+                                data4.game.gameName, localization, longitude, latitude);
+
+                              //Verifica se dados do jogador já foram inseridos ao vetor de elementos antes de adicioná-lo
+                              var elementPos = steamUserDataArray.map(function (x) { return x.steamid; }).indexOf(friend.steamid);
+                              if (!steamUserDataArray[elementPos]) steamUserDataArray.push(steamUserData);
+
                               console.log(++counter);
                               console.log("User id: " + friend.steamid);
                               console.log("User name: " + username);
                               console.log("Most played game id: " + mostPlayedGame.appid);
                               console.log("Most played game name: " + data4.game.gameName);
                               console.log("Localization: " + localization);
-
-                              if (longitude) {
-                                console.log("Longitude: " + longitude);
-                                console.log("Latitude: " + latitude);
-                              }
-
+                              console.log("Longitude: " + longitude);
+                              console.log("Latitude: " + latitude);
                               console.log();
                             }
 
-                            itemsProcessed++;
-
                             if (itemsProcessed === data1.friendslist.friends.length) {
-                              newSteamId = getRandomId(data1);
+                              newSteamId = getRandomId(data1.friendslist.friends);
                               callback(newSteamId);
                             }
                           }
@@ -107,17 +121,34 @@ function getSteamWebApiData(steamid, callback) {
             }
           })
         })
+      } else {
+        //Obtém id aleatório do vetor de usuários ja importados, caso algum dos usuários não tenha tornado pública a sua lista de amigos.
+        newSteamId = getRandomId(steamUserDataArray);
+        callback(newSteamId);
       }
     }
   })
 }
 
-function getRandomId(data) {
-  //Obtém id aleatório dentre a lista de amigos para que seja feita nova busca.
-  var friendsArray = data.friendslist.friends;
-  var newSteamId = friendsArray[Math.floor(Math.random() * friendsArray.length)].steamid;
+function getSteamUserData() {
+  var steamUserData = {
+    steamid: arguments[0],
+    username: arguments[1],
+    mostPlayedGameId: arguments[2],
+    mostPlayedGameName: arguments[3],
+    localization: arguments[4],
+    longitude: arguments[5],
+    latitude: arguments[6]
+  };
 
-  if (counter !== max) {
+  return steamUserData;
+}
+
+function getRandomId(dataArray) {
+  //Obtém id aleatório dentre a lista de amigos para que seja feita nova busca.
+  var newSteamId = dataArray[Math.floor(Math.random() * dataArray.length)].steamid;
+
+  if (counter <= max) {
     return newSteamId;
   } else {
     return "";

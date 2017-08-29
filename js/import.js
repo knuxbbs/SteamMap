@@ -18,7 +18,7 @@ function repeatCallback(newSteamId) {
       console.log("Importação finalizada.");
       writeJsonFile();
     }, function (err) {
-      
+
     });
   }
 }
@@ -34,7 +34,7 @@ function getSteamWebApiData(steamid, callback) {
     steamid: steamid,
     relationship: 'all', //'all' or 'friend'
     callback: function (err, data1, newSteamId) {
-      if (data1.friendslist) {
+      if (data1 && data1.friendslist) {
         data1.friendslist.friends.forEach(function (friend) {
 
           processedItems++;
@@ -60,16 +60,16 @@ function getSteamWebApiData(steamid, callback) {
                         country.states[player.locstatecode].cities[player.loccityid].coordinates) {
 
                         city = country.states[player.locstatecode].cities[player.loccityid].name;
-                        longitude = country.states[player.locstatecode].cities[player.loccityid].coordinates.split(",")[0];
-                        latitude = country.states[player.locstatecode].cities[player.loccityid].coordinates.split(",")[1];
+                        latitude = country.states[player.locstatecode].cities[player.loccityid].coordinates.split(",")[0];
+                        longitude = country.states[player.locstatecode].cities[player.loccityid].coordinates.split(",")[1];
 
-                      } else {
-                        longitude = country.states[player.locstatecode].coordinates.split(",")[0];
-                        latitude = country.states[player.locstatecode].coordinates.split(",")[1];
+                      } else if (country.states[player.locstatecode].coordinates) {
+                        latitude = country.states[player.locstatecode].coordinates.split(",")[0];
+                        longitude = country.states[player.locstatecode].coordinates.split(",")[1];
                       }
                     } else if (country && country.coordinates) {
-                      longitude = country.coordinates.split(",")[0];
-                      latitude = country.coordinates.split(",")[1];
+                      latitude = country.coordinates.split(",")[0];
+                      longitude = country.coordinates.split(",")[1];
                     }
                   }
 

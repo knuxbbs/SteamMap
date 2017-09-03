@@ -2,7 +2,39 @@ html, body {
     height: 100%;
     margin: 0;
     padding: 0;
-  }
+}
+
+b {
+    font-weight: bold;
+}
+
+h1{
+    display: block;
+    font-size: 2em;
+    margin-top: 0.67em;
+    margin-bottom: 0.67em;
+    margin-left: 0;
+    margin-right: 0;
+    font-weight: bold;
+}
+
+h3 {
+    display: block;
+    font-size: 1.17em;
+    margin-top: 1em;
+    margin-bottom: 1em;
+    margin-left: 0;
+    margin-right: 0;
+    font-weight: bold;
+}
+
+p{
+    display: block;
+    margin-top: 1em;
+    margin-bottom: 1em;
+    margin-left: 0;
+    margin-right: 0;
+}
 
 #map{
     height: 100%;
@@ -11,6 +43,8 @@ html, body {
 }
 
 #content{
+    height: 100%;
+    width: 30%;
     float: right;
 }
 
